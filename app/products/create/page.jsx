@@ -10,7 +10,7 @@ const Page = () => {
     status: "ACTIVE",
     price: "",
     tags: "",
-    imageUrl: "",
+    options: [{ name: "", values: "" }],
   });
 
   const handleChange = (e) => {
@@ -24,12 +24,20 @@ const Page = () => {
       ? formData.tags.split(",").map((tag) => tag.trim())
       : [];
 
+    const optionsFormatted = formData.options.map((opt) => ({
+      name: opt.name.charAt(0).toUpperCase() + opt.name.slice(1), // Size / Color
+      values: opt.values
+        .split(",") // split comma separated string
+        .map((v) => ({
+          name: v.trim().charAt(0).toUpperCase() + v.trim().slice(1), // capitalize
+        })),
+    }));
+
     const productInput = {
       title: formData.title,
-      bodyHtml: formData.descriptionHtml, // Backend handles the mapping
+      bodyHtml: formData.descriptionHtml,
       status: formData.status,
       tags: tagsArray,
-      images: formData.imageUrl ? [{ src: formData.imageUrl }] : [],
       variants: [
         {
           price: formData.price,
@@ -37,7 +45,7 @@ const Page = () => {
       ],
     };
 
-    console.log("Sending to API:", productInput); // Correctly placed inside handleSubmit
+    console.log("Sending to API:", productInput, "and", optionsFormatted);
 
     try {
       const response = await fetch("/api/products", {
@@ -45,7 +53,7 @@ const Page = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(productInput),
+        body: JSON.stringify({ productInput }),
       });
 
       const result = await response.json();
@@ -56,10 +64,9 @@ const Page = () => {
         setFormData({
           title: "",
           descriptionHtml: "",
-          status: "ACTIVE",
-          price: "",
+          status: "",
           tags: "",
-          imageUrl: "",
+          price: "",
         });
       } else {
         // Shopify errors handle karein
@@ -84,51 +91,24 @@ const Page = () => {
           <input
             type="text"
             name="title"
-            value={formData.title} // Added value
+            value={formData.title}
             required
             className="w-full p-2 border rounded mt-1 bg-transparent"
             onChange={handleChange}
           />
         </div>
-
+        {/* Description */}
         <div>
           <label className="block text-sm font-medium">Description</label>
           <textarea
             name="descriptionHtml"
-            value={formData.descriptionHtml} // Added value
+            value={formData.descriptionHtml}
             rows="3"
             className="w-full p-2 border rounded mt-1 bg-transparent"
             onChange={handleChange}
           ></textarea>
         </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium">Price (Variant)</label>
-            <input
-              type="number"
-              name="price"
-              value={formData.price} // Added value
-              className="w-full p-2 border rounded mt-1 bg-transparent"
-              onChange={handleChange}
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium">Status</label>
-            <select
-              name="status"
-              value={formData.status} // Added value
-              className="w-full p-2 border rounded mt-1 bg-gray-800"
-              onChange={handleChange}
-            >
-              <option value="ACTIVE">Active</option>
-              <option value="DRAFT">Draft</option>
-              <option value="ARCHIVED">Archived</option>
-            </select>
-          </div>
-        </div>
-
+        {/* Tag */}
         <div>
           <label className="block text-sm font-medium">
             Tags (comma separated)
@@ -142,19 +122,65 @@ const Page = () => {
             onChange={handleChange}
           />
         </div>
-
-        {/* <div>
-          <label className="block text-sm font-medium">Image URL</label>
-          <input
-            type="url"
-            name="imageUrl"
-            value={formData.imageUrl}
-            placeholder="https://example.com/image.jpg"
-            className="w-full p-2 border rounded mt-1 bg-transparent"
-            onChange={handleChange}
-          />
-        </div> */}
-
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium">Status</label>
+            <select
+              name="status"
+              value={formData.status} // Added value
+              className="w-full p-2 border rounded mt-1 bg-gray-800"
+              onChange={handleChange}
+            >
+              <option value="ACTIVE">Active</option>
+              <option value="DRAFT">Draft</option>
+              <option value="ARCHIVED">Archived</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Price </label>
+            <input
+              type="number"
+              name="price"
+              value={formData.price}
+              className="w-full p-2 border rounded mt-1 bg-transparent"
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium">Option Name</label>
+            <input
+              type="text"
+              name="optionName"
+              placeholder="Size / Color"
+              value={formData.options[0].name}
+              className="w-full p-2 border rounded mt-1 bg-transparent"
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  options: [{ ...formData.options[0], name: e.target.value }],
+                })
+              }
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium">Option Values</label>
+            <input
+              type="text"
+              name="optionValues"
+              placeholder="Small, Medium, Large"
+              value={formData.options[0].values}
+              className="w-full p-2 border rounded mt-1 bg-transparent"
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  options: [{ ...formData.options[0], values: e.target.value }],
+                })
+              }
+            />
+          </div>
+        </div>
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 transition"

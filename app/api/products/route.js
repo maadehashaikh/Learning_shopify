@@ -58,10 +58,10 @@ export async function POST(request) {
     // STEP 2: Shopify API ke liye variables prepare karein
     const variables = {
       input: {
-        title: uiData.title,
-        descriptionHtml: uiData.bodyHtml,
-        status: uiData.status || "ACTIVE",
-        tags: uiData.tags || [],
+        title: uiData.productInput.title,
+        descriptionHtml: uiData.productInput.bodyHtml,
+        status: uiData.productInput.status || "ACTIVE",
+        tags: uiData.productInput.tags || [],
       },
     };
     console.log("Variables for Shopify API:", JSON.stringify(variables));
@@ -144,26 +144,32 @@ export async function POST(request) {
 
     // STEP 9: Variant price update mutation
     const variantMutation = `
-      mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
-        productVariantsBulkUpdate(productId: $productId, variants: $variants) {
-          productVariants {
-            id
-            price
-          }
-          userErrors {
-            field
-            message
+        mutation productVariantsBulkUpdate($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+          productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+            productVariants {
+              id
+              price
+            }
+            userErrors {
+              field
+              message
+            }
           }
         }
-      }
-    `;
+      `;
 
     const variantVariables = {
       productId: productId,
       variants: [
         {
           id: variantId,
-          price: uiData.variants[0].price,
+          price: uiData.productInput.variants[0].price,
+          // optionValues: [
+          //   {
+          //     optionName: "Title",
+          //     name: uiData.productInput.variants[0].title || "small",
+          //   },
+          // ],
         },
       ],
     };
@@ -191,13 +197,56 @@ export async function POST(request) {
         { status: 400 },
       );
     }
+    // options create  kr rhy  hain
+
+    const createOptionsMutation = `
+  mutation productOptionsCreate($productId: ID!, $options: [OptionCreateInput!]!) {
+    productOptionsCreate(productId: $productId, options: $options) {
+      product {
+        id
+        title
+        options {
+          name
+          optionValues {
+            name
+          }
+        }
+      }
+      userErrors {
+        field
+        message
+      }
+    }
+  }
+`;
+
+    const createOptionsVariables = {
+      productId: productId,
+      options: [
+        {
+          name: "Size",
+          values: [{ name: "Small" }],
+        },
+        {
+          name: "Color",
+          values: [{ name: "Red" }],
+        },
+      ],
+    };
+
+    const optionsCreateVariant = await shopifyFetch(
+      createOptionsMutation,
+      createOptionsVariables,
+    );
+    console.log(
+      "Variant Updated Response:",
+      JSON.stringify(optionsCreateVariant, null, 2),
+    );
 
     // STEP 11: Success response
     return Response.json({
       success: true,
       product: result.data.productCreate.product,
-      // variants: variantResult.data.product.variants.nodes,
-      // variant: updateVariant.data.productVariantsBulkUpdate.productVariants,
     });
   } catch (err) {
     console.error("API Route Error:", err);
